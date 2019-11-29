@@ -12,16 +12,7 @@ import (
 )
 
 func Start(watchDir string) {
-	absWatchDir, err := filepath.Abs(watchDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if _, err = os.Stat(absWatchDir); os.IsNotExist(err) {
-		fmt.Printf("watch directory %s doesn't exist\n", absWatchDir)
-		os.Exit(1)
-	}
-
+	absWatchDir := validateWatchDir(watchDir)
 	fmt.Printf("client started watching %s\n", absWatchDir)
 
 	watcher, err := fsnotify.NewWatcher()
@@ -56,6 +47,20 @@ func Start(watchDir string) {
 	<-done
 }
 
+func validateWatchDir(watchDir string) (absWatchDir string) {
+	absWatchDir, err := filepath.Abs(watchDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err = os.Stat(absWatchDir); os.IsNotExist(err) {
+		fmt.Printf("watch directory %s doesn't exist\n", absWatchDir)
+		os.Exit(1)
+	}
+
+	return absWatchDir
+}
+
 func initWatcher(w *fsnotify.Watcher, rootDir string) error {
 	err := w.Add(rootDir)
 	if err != nil {
@@ -77,16 +82,16 @@ func initWatcher(w *fsnotify.Watcher, rootDir string) error {
 	return err
 }
 
+// onEvent handles changes to any file or directory being watched by the
+// watcher. Roughly, it:
+//
+// 1) Transforms the filesystem event into a Syncable, which provides
+//    some convenience methods to return metadata about the resource.
+// 2) Checks if a new directory has been created or a directory has
+//    been removed, and calls the event handlers for those.
+// 3) Adds the Syncable to a SyncQueue, which is responsible for deciding
+//    when to sync the files.
 func onEvent(w *fsnotify.Watcher, e fsnotify.Event) {
-	// Ignore .swp files
-	//if strings.HasSuffix(e.Name, ".swp") {
-	//		return
-	//}
-
-	// Listen for:
-	//  - file created/modified/deleted
-	//  - dir created/modified/deleted
-
 	s, err := syncable.NewSyncable(e)
 	if err != nil {
 		log.Println(err.Error())
