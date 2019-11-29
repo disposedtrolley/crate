@@ -9,17 +9,17 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type fileType string
+type FileType string
 
 const (
-	fileTypeDir     fileType = "DIR"
-	fileTypeFile             = "FILE"
-	fileTypeDeleted          = "DELETED"
+	FileTypeDir     FileType = "DIR"
+	FileTypeFile             = "FILE"
+	FileTypeDeleted          = "DELETED"
 )
 
 type Syncable struct {
 	absPath   string
-	ftype     fileType
+	ftype     FileType
 	op        fsnotify.Op
 	timestamp time.Time
 }
@@ -28,7 +28,7 @@ func (s *Syncable) Path() string {
 	return s.absPath
 }
 
-func (s *Syncable) FileType() fileType {
+func (s *Syncable) FileType() FileType {
 	return s.ftype
 }
 
@@ -45,7 +45,11 @@ func (s *Syncable) String() string {
 }
 
 func (s *Syncable) IsDeleted() bool {
-	return s.ftype == fileTypeDeleted
+	return s.ftype == FileTypeDeleted
+}
+
+func (s *Syncable) IsCreated() bool {
+	return s.op&fsnotify.Create == fsnotify.Create
 }
 
 func NewSyncable(e fsnotify.Event) (*Syncable, error) {
@@ -54,10 +58,10 @@ func NewSyncable(e fsnotify.Event) (*Syncable, error) {
 		return nil, err
 	}
 
-	var ftype fileType
+	var ftype FileType
 	deleted := e.Op&fsnotify.Remove == fsnotify.Remove
 	if deleted {
-		ftype = fileTypeDeleted
+		ftype = FileTypeDeleted
 	} else {
 		fi, err := os.Stat(abspath)
 		if err != nil {
@@ -65,9 +69,9 @@ func NewSyncable(e fsnotify.Event) (*Syncable, error) {
 		}
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
-			ftype = fileTypeDir
+			ftype = FileTypeDir
 		case mode.IsRegular():
-			ftype = fileTypeFile
+			ftype = FileTypeFile
 		}
 	}
 

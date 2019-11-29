@@ -56,6 +56,11 @@ func Start(watchDir string) {
 }
 
 func onEvent(w *fsnotify.Watcher, e fsnotify.Event) {
+	// Ignore .swp files
+	//if strings.HasSuffix(e.Name, ".swp") {
+	//		return
+	//}
+
 	// Listen for:
 	//  - file created/modified/deleted
 	//  - dir created/modified/deleted
@@ -67,8 +72,19 @@ func onEvent(w *fsnotify.Watcher, e fsnotify.Event) {
 
 	log.Println(s)
 
+	if s.FileType() == syncable.FileTypeDir && s.IsCreated() {
+		onDirCreate(w, s.Path())
+	}
+
+	if s.FileType() == syncable.FileTypeDir && s.IsDeleted() {
+		onDirDelete(w, s.Path())
+	}
 }
 
 func onDirCreate(w *fsnotify.Watcher, dirpath string) error {
 	return w.Add(dirpath)
+}
+
+func onDirDelete(w *fsnotify.Watcher, dirpath string) error {
+	return w.Remove(dirpath)
 }
