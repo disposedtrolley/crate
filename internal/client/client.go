@@ -108,7 +108,7 @@ func (s *Syncable) String() string {
 }
 
 func (s *Syncable) IsDeleted() bool {
-	return s.op&fsnotify.Remove == fsnotify.Remove
+	return s.ftype == fileTypeDeleted
 }
 
 func NewSyncable(e fsnotify.Event) (*Syncable, error) {
