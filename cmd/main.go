@@ -24,7 +24,12 @@ func main() {
 		port, _ := strconv.Atoi(os.Args[2])
 		server.Start(port)
 	case "client":
-		client.Start()
+		if len(os.Args) < 3 {
+			fmt.Println("watch directory must be supplied")
+			os.Exit(1)
+		}
+		watchDir := os.Args[2]
+		client.Start(watchDir)
 	default:
 		fmt.Println("`server` or `client` commands are supported")
 		os.Exit(1)
