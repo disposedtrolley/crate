@@ -95,11 +95,17 @@ func onEvent(w *fsnotify.Watcher, e fsnotify.Event) {
 	log.Println(s)
 
 	if s.FileType() == syncable.FileTypeDir && s.IsCreated() {
-		onDirCreate(w, s.Path())
+		err := onDirCreate(w, s.Path())
+		if err != nil {
+			log.Printf("watch new dir: %v\n", err)
+		}
 	}
 
 	if s.FileType() == syncable.FileTypeDir && s.IsDeleted() {
-		onDirDelete(w, s.Path())
+		err := onDirDelete(w, s.Path())
+		if err != nil {
+			log.Printf("unwatch deleted dir: %v\n", err)
+		}
 	}
 }
 
