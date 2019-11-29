@@ -18,10 +18,10 @@ const (
 )
 
 type Syncable struct {
-	absPath   string
-	ftype     FileType
-	op        fsnotify.Op
-	timestamp time.Time
+	absPath string
+	ftype   FileType
+	op      fsnotify.Op
+	finfo   os.FileInfo // nil if op == REMOVED || ftype == DELETED
 }
 
 func (s *Syncable) Path() string {
@@ -36,12 +36,15 @@ func (s *Syncable) Op() fsnotify.Op {
 	return s.op
 }
 
-func (s *Syncable) Time() time.Time {
-	return s.timestamp
+func (s *Syncable) ModTime() (time.Time, error) {
+	if s.IsDeleted() {
+		return time.Now(), fmt.Errorf("deleted resource has no ModTime")
+	}
+	return s.finfo.ModTime(), nil
 }
 
 func (s *Syncable) String() string {
-	return fmt.Sprintf("\n====\nresource: %s \ntype: %s \nop: %s \ntime: %s\n====\n", s.Path(), s.FileType(), s.Op(), s.Time().Format("20060102-15:04:05.000"))
+	return fmt.Sprintf("\n====\nresource: %s \ntype: %s \nop: %s \n====\n", s.Path(), s.FileType(), s.Op())
 }
 
 func (s *Syncable) IsDeleted() bool {
@@ -59,15 +62,17 @@ func NewSyncable(e fsnotify.Event) (*Syncable, error) {
 	}
 
 	var ftype FileType
+	var finfo os.FileInfo
 	deleted := e.Op&fsnotify.Remove == fsnotify.Remove
 	if deleted {
 		ftype = FileTypeDeleted
 	} else {
-		fi, err := os.Stat(abspath)
+		finfo, err := os.Stat(abspath)
 		if err != nil {
 			return nil, err
 		}
-		switch mode := fi.Mode(); {
+
+		switch mode := finfo.Mode(); {
 		case mode.IsDir():
 			ftype = FileTypeDir
 		case mode.IsRegular():
@@ -76,9 +81,9 @@ func NewSyncable(e fsnotify.Event) (*Syncable, error) {
 	}
 
 	return &Syncable{
-		absPath:   abspath,
-		ftype:     ftype,
-		op:        e.Op,
-		timestamp: time.Now(),
+		absPath: abspath,
+		ftype:   ftype,
+		op:      e.Op,
+		finfo:   finfo,
 	}, nil
 }
