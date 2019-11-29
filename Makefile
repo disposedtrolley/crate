@@ -10,4 +10,4 @@ ssh:
 	vagrant ssh
 
 client-test:
-	go run cmd/main.go client ~/crate_test_dir
+	go run cmd/client/main.go ~/crate_test_dir
