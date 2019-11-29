@@ -8,3 +8,6 @@ down:
 
 ssh:
 	vagrant ssh
+
+client-test:
+	go run cmd/main.go client ~/crate_test_dir
