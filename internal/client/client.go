@@ -48,11 +48,33 @@ func Start(watchDir string) {
 		}
 	}()
 
-	err = watcher.Add(absWatchDir)
+	err = initWatcher(watcher, absWatchDir)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	<-done
+}
+
+func initWatcher(w *fsnotify.Watcher, rootDir string) error {
+	err := w.Add(rootDir)
+	if err != nil {
+		return err
+	}
+
+	// walk all nested dirs and add them to the watcher
+	err = filepath.Walk(rootDir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.Mode().IsDir() {
+				return w.Add(path)
+			}
+			return nil
+		})
+
+	return err
 }
 
 func onEvent(w *fsnotify.Watcher, e fsnotify.Event) {
