@@ -14,9 +14,11 @@ type FileType string
 const (
 	FileTypeDir     FileType = "DIR"
 	FileTypeFile             = "FILE"
-	FileTypeDeleted          = "DELETED"
+	FileTypeRemoved          = "REMOVED"
 )
 
+// Syncable represents a filesystem event which we're interested in syncing.
+// Check IsDeleted() before accessing file metadata.
 type Syncable struct {
 	absPath string
 	ftype   FileType
@@ -48,7 +50,7 @@ func (s *Syncable) String() string {
 }
 
 func (s *Syncable) IsDeleted() bool {
-	return s.ftype == FileTypeDeleted
+	return s.ftype == FileTypeRemoved
 }
 
 func (s *Syncable) IsCreated() bool {
@@ -63,9 +65,9 @@ func NewSyncable(e fsnotify.Event) (*Syncable, error) {
 
 	var ftype FileType
 	var finfo os.FileInfo
-	deleted := e.Op&fsnotify.Remove == fsnotify.Remove
-	if deleted {
-		ftype = FileTypeDeleted
+	deletedOrRenamed := e.Op&fsnotify.Remove == fsnotify.Remove || e.Op&fsnotify.Rename == fsnotify.Rename
+	if deletedOrRenamed {
+		ftype = FileTypeRemoved
 	} else {
 		finfo, err := os.Stat(abspath)
 		if err != nil {
